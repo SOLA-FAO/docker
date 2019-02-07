@@ -1,7 +1,6 @@
 # Subfolders to ignore
 database/registry/*/
 database/stateland/*/
-server/registry/deploy/*/
 server/stateland/deploy/*/
 
 # Files to ignore 
