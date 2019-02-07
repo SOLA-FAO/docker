@@ -1,4 +1,7 @@
-# Use postgis as base image
+# This DockerFlle can be used to build and configure an image of the Postgres database
+# server with PostGIS installed. Note that pre-built docker images for the SOLA solutions 
+# are available from DockerHub at https://hub.docker.com/u/mcdowella 
+
 FROM mdillon/postgis:11
 
 ENV SOLA_HOME /home/sola
@@ -16,7 +19,7 @@ ARG SOLA_SOLUTION=registry/1503a
 
 RUN mkdir -p ${SOLA_HOME}
 
-# Copies the database build files from source directories into the container
+# Copies the database build files from source directories into the image
 COPY common/ ${SOLA_SOLUTION}/ ${SOLA_HOME}/
 
 # See postgres docker image documentation. Files in docker-entrypoint-initdb.d
@@ -27,7 +30,7 @@ COPY common/ ${SOLA_SOLUTION}/ ${SOLA_HOME}/
 # to SOLA_HOME.  
 RUN mv /docker-entrypoint-initdb.d/*.sh ${SOLA_HOME}/. && \
     cp ${SOLA_HOME}/create_database.sh /docker-entrypoint-initdb.d/.  && \
-    chmod 644 /docker-entrypoint-initdb.d/create_database.sh && \
-	chmod 766 ${SOLA_HOME}
+    chmod 755 /docker-entrypoint-initdb.d/create_database.sh && \
+	chmod 777 ${SOLA_HOME}
 
 

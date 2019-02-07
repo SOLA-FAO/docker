@@ -1,16 +1,33 @@
+# This DockerFlle can be used to build and configure an image of the Payara Application Server 
+# for hosting SOLA solutions. Note that pre-built docker images for the SOLA solutions are 
+# available from DockerHub at https://hub.docker.com/u/mcdowella 
+
+# Avoid versions 5.182, 5.183, and 5.184 of Payara server. These versions have been
+# tested, but prevent SOLA from deploying/running due to various issues.   
 FROM payara/server-full:5.181
 
-#ENV PAYARA_PATH $PAYARA_DIR - Use for versions from 5.183 and above. PAYARA_PATH is set in versions prior to 5.183. 
+# Uncomment PAYARA_PATH and use for versions from 5.183 and above. PAYARA_PATH is set in 
+# versions prior to 5.183 by the Payara build. 
+#ENV PAYARA_PATH $PAYARA_DIR 
+
+# SOLA solution and version to build. 
+# Docker arguments can be overridden from the build command line. See the --build-arg option.
+ARG SOLA_SOLUTION=registry
+ARG SOLA_VERSION=1503a
+
+# Keystore parameters
 ARG SRC_KEYSTORE_PASS=changeit
 ARG MSG_ENCRYPT_CERT_ALIAS=xws-security-server
-ARG SOLA_SOLUTION=registry
-ARG PAYARA_DOMAIN=domain1
-ARG SOLA_VERSION=1503a
+
+# Database connection parameters
 ARG DATABASE_USER=postgres
 ARG DATABASE_PASS=sola
 ARG DATABASE=sola
 ARG DATABASE_HOST=database
 ARG DATAPOOL=sola
+
+# Payara domain and deploy parameters
+ARG PAYARA_DOMAIN=domain1
 ARG PAYARA_PASSWD=admin
 ARG SOLA_SERVICES_EAR=sola-services-ear-1503a
 ARG SOLA_DESKTOP_WEBSTART=desktop-web-start-1503a
@@ -44,11 +61,15 @@ USER payara
 
 # RUN completes the following tasks:
 # 1. Creates a command file to configure the SOLA domain and deploy the SOLA applications . 
-# 2. Creates password file to access Payara. Assumes default password has been set to admin. Check the payara/server-full image for password changes.
-# 3. Creates a custom post boot deploy commands that will deploy the SOLA applications (sola-services, desktop-web-start and the sola-web-admin) 
-#    the first time the Payara image is run. Uses POSTBOOT_COMMANDS environment variable setup by the payara/server-full image.
-# 4. Configures the domain for SOLA deployment using the admin command file (created in step 1) - but does not deploy the applications. 
-#    Deploying the apps is performed when the image is run to create a container.
+# 2. Creates password file to access Payara. Assumes default password has been set to admin. 
+#    Check the payara/server-full image for password changes.
+# 3. Creates a custom post boot deploy commands that will deploy the SOLA applications (sola-services, 
+#    desktop-web-start and the sola-web-admin) 
+#    the first time the Payara image is run. Uses POSTBOOT_COMMANDS environment variable setup by 
+#    the payara/server-full image.
+# 4. Configures the domain for SOLA deployment using the admin command file (created in step 1) - 
+#    but does not deploy the applications. Deploying the apps is performed when the image is 
+#    run to create a container.
 RUN echo "create-jdbc-connection-pool --validateAtmostOncePeriodInSeconds=0 --sqlTraceListeners=fish.payara.jdbc.SilentSqlTraceListener --statementLeakReclaim=false --ping=false --maxWaitTimeInMillis=60000 --wrapJdbcObjects=true --connectionValidationMethod=table --steadyPoolSize=8 --idleTimeoutInSeconds=300 --maxConnectionUsageCount=0 --matchConnections=false --connectionCreationRetryIntervalInSeconds=10 --associateWithThread=false --isConnectionValidationRequired=false --connectionLeakReclaim=false --datasourceClassname=org.postgresql.ds.PGConnectionPoolDataSource --connectionCreationRetryAttempts=0 --statementCacheSize=0 --resType=javax.sql.ConnectionPoolDataSource --statementLeakTimeoutInSeconds=0 --failAllConnections=false --statementTimeoutInSeconds=-1 --lazyConnectionEnlistment=false --pooling=true --poolResizeQuantity=2 --allowNonComponentCallers=false --connectionLeakTimeoutInSeconds=0 --isIsolationLevelGuaranteed=true --maxPoolSize=32 --nonTransactionalConnections=false --lazyConnectionAssociation=false ${DATAPOOL} \n\
 set resources.jdbc-connection-pool.${DATAPOOL}.property.TargetServerType=any resources.jdbc-connection-pool.${DATAPOOL}.property.BinaryTransfer=true resources.jdbc-connection-pool.${DATAPOOL}.property.UnknownLength=2147483647 resources.jdbc-connection-pool.${DATAPOOL}.property.DisableColumnSanitiser=false resources.jdbc-connection-pool.${DATAPOOL}.property.UseSpNego=false resources.jdbc-connection-pool.${DATAPOOL}.property.SspiServiceClass=POSTGRES resources.jdbc-connection-pool.${DATAPOOL}.property.ProtocolVersion=0 resources.jdbc-connection-pool.${DATAPOOL}.property.SendBufferSize=-1 resources.jdbc-connection-pool.${DATAPOOL}.property.ReceiveBufferSize=-1 resources.jdbc-connection-pool.${DATAPOOL}.property.LoadBalanceHosts=false resources.jdbc-connection-pool.${DATAPOOL}.property.ReadOnly=false resources.jdbc-connection-pool.${DATAPOOL}.property.LogUnclosedConnections=false resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseName=${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.GssLib=auto resources.jdbc-connection-pool.${DATAPOOL}.property.CancelSignalTimeout=10 resources.jdbc-connection-pool.${DATAPOOL}.property.PortNumber=0 resources.jdbc-connection-pool.${DATAPOOL}.property.DefaultRowFetchSize=0 resources.jdbc-connection-pool.${DATAPOOL}.property.User=${DATABASE_USER} resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseMetadataCacheFieldsMiB=5 resources.jdbc-connection-pool.${DATAPOOL}.property.URL=jdbc:postgresql://${DATABASE_HOST}/${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.Url=jdbc:postgresql://${DATABASE_HOST}/${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.AllowEncodingChanges=false resources.jdbc-connection-pool.${DATAPOOL}.property.JaasLogin=true resources.jdbc-connection-pool.${DATAPOOL}.property.PrepareThreshold=5 resources.jdbc-connection-pool.${DATAPOOL}.property.ReWriteBatchedInserts=false resources.jdbc-connection-pool.${DATAPOOL}.property.SocketTimeout=0 resources.jdbc-connection-pool.${DATAPOOL}.property.HostRecheckSeconds=10 resources.jdbc-connection-pool.${DATAPOOL}.property.Password=${DATABASE_PASS} resources.jdbc-connection-pool.${DATAPOOL}.property.ConnectTimeout=10 resources.jdbc-connection-pool.${DATAPOOL}.property.ApplicationName='PostgreSQL JDBC Driver' resources.jdbc-connection-pool.${DATAPOOL}.property.PreparedStatementCacheQueries=256 resources.jdbc-connection-pool.${DATAPOOL}.property.Ssl=false resources.jdbc-connection-pool.${DATAPOOL}.property.PreparedStatementCacheSizeMiB=5 resources.jdbc-connection-pool.${DATAPOOL}.property.LoginTimeout=0 resources.jdbc-connection-pool.${DATAPOOL}.property.ServerName=${DATABASE_HOST} resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseMetadataCacheFields=65536 resources.jdbc-connection-pool.${DATAPOOL}.property.TcpKeepAlive=false \n\
 create-jdbc-resource --enabled=true --poolName=${DATAPOOL} --target=domain jdbc/${DATAPOOL} \n\

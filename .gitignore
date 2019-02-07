@@ -7,4 +7,6 @@ server/stateland/deploy/*/
 Thumbs.db
 thumbs.db
 *.log
-
+# Ignore any certificate keystores to ensure private keys
+# are not uploaded to Github by mistake. 
+*.jks
