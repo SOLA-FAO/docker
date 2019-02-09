@@ -1,4 +1,4 @@
-# This DockerFlle can be used to build and configure an image of the Payara Application Server 
+# This Dockerflle can be used to build and configure an image of the Payara Application Server 
 # for hosting SOLA solutions. Note that pre-built docker images for the SOLA solutions are 
 # available from DockerHub at https://hub.docker.com/u/mcdowella 
 
@@ -12,8 +12,29 @@ FROM payara/server-full:5.181
 
 # SOLA solution and version to build. 
 # Docker arguments can be overridden from the build command line. See the --build-arg option.
-ARG SOLA_SOLUTION=registry
 ARG SOLA_VERSION=1503a
+
+# SOLA Registry settings
+#ARG SOLA_SOLUTION=registry
+#ARG CONTEXT_ROOT=sola
+#ARG SOLA_SERVICES_EAR=sola-services-ear-${SOLA_VERSION}
+#ARG SOLA_DESKTOP_WEBSTART=desktop-web-start-${SOLA_VERSION}
+#ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+
+# SOLA State Land Settings
+#ARG SOLA_SOLUTION=stateland
+#ARG CONTEXT_ROOT=sola_sl
+#ARG SOLA_SERVICES_EAR=sola-sl-services-ear-${SOLA_VERSION}
+#ARG SOLA_DESKTOP_WEBSTART=desktop-sl-web-start-${SOLA_VERSION}
+#ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+
+#SOLA Systematic Registration Settings
+ARG SOLA_SOLUTION=systemreg
+ARG CONTEXT_ROOT=sola_sr
+ARG SOLA_SERVICES_EAR=sola-sr-services-ear-${SOLA_VERSION}
+ARG SOLA_DESKTOP_WEBSTART=desktop-sr-web-start-${SOLA_VERSION}
+ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+
 
 # Keystore parameters
 ARG SRC_KEYSTORE_PASS=changeit
@@ -29,16 +50,15 @@ ARG DATAPOOL=sola
 # Payara domain and deploy parameters
 ARG PAYARA_DOMAIN=domain1
 ARG PAYARA_PASSWD=admin
-ARG SOLA_SERVICES_EAR=sola-services-ear-1503a
-ARG SOLA_DESKTOP_WEBSTART=desktop-web-start-1503a
-ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+
+ENV WAIT_TIME=0
 
 RUN mkdir -p ${PAYARA_PATH}/temp/ && \
     mkdir -p ${PAYARA_PATH}/sola_deploy/
 
 COPY common/ ${SOLA_SOLUTION}/certs/ ${PAYARA_PATH}/temp/ 
 # Copy EAR and WAR packages to deploy based on the selected SOLA version. 
-COPY --chown=payara:payara ${SOLA_SOLUTION}/deploy/${SOLA_VERSION} ${PAYARA_PATH}/sola_deploy/ 
+COPY --chown=payara:payara ${SOLA_SOLUTION}/deploy/${SOLA_VERSION}/ ${PAYARA_PATH}/sola_deploy/ 
 
 # Add the certificate used by SOLA for message encryption to the Payara keystore. 
 # IMPORTANT: This certificate is for demonstration purposes only. For production deployment, 
@@ -60,7 +80,7 @@ RUN mv ${PAYARA_PATH}/temp/jackson* ${PAYARA_PATH}/glassfish/modules/. && \
 USER payara
 
 # RUN completes the following tasks:
-# 1. Creates a command file to configure the SOLA domain and deploy the SOLA applications . 
+# 1. Creates a command file to configure the SOLA domain to support deployment of the SOLA applications. 
 # 2. Creates password file to access Payara. Assumes default password has been set to admin. 
 #    Check the payara/server-full image for password changes.
 # 3. Creates a custom post boot deploy commands that will deploy the SOLA applications (sola-services, 
@@ -79,11 +99,13 @@ create-resource-ref --enabled=true --target=server jdbc/${DATAPOOL}_sl \n\
 create-jdbc-resource --enabled=true --poolName=${DATAPOOL} --target=domain jdbc/${DATAPOOL}_sr \n\
 create-resource-ref --enabled=true --target=server jdbc/${DATAPOOL}_sr \n\
 create-auth-realm --classname=com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm --property=jaas-context=jdbcRealm:datasource-jndi=jdbc/${DATAPOOL}:user-table=system.active_users:user-name-column=username:password-column=passwd:group-table=system.user_roles:group-name-column=rolename: --target=server-config SolaRealm \n\
+create-auth-realm --classname=com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm --property=jaas-context=jdbcRealm:datasource-jndi=jdbc/${DATAPOOL}_sl:user-table=system.active_users:user-name-column=username:password-column=passwd:group-table=system.user_roles:group-name-column=rolename: --target=server-config SolaSLRealm \n\
+create-auth-realm --classname=com.sun.enterprise.security.auth.realm.jdbc.JDBCRealm --property=jaas-context=jdbcRealm:datasource-jndi=jdbc/${DATAPOOL}_sr:user-table=system.active_users:user-name-column=username:password-column=passwd:group-table=system.user_roles:group-name-column=rolename: --target=server-config SolaSRRealm \n\
 set-log-levels --target=server-config org.sola.services=INFO:java.sql.ResultSet=OFF:java.sql.Connection=FINE:java.sql=FINE " > ${PAYARA_PATH}/temp/asadmin-command-file && \
     echo "AS_ADMIN_PASSWORD=${PAYARA_PASSWD}" > ${PAYARA_PATH}/temp/passwordFile && \
     echo "deploy --keepState=false --precompilejsp=false --availabilityEnabled=false --name=${SOLA_SERVICES_EAR} --verify=false --force=false --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:java-web-start-enabled=true --target=server ${PAYARA_PATH}/sola_deploy/${SOLA_SERVICES_EAR}.ear \n\
-deploy --keepState=false --precompilejsp=false --availabilityEnabled=false --name=${SOLA_WEB_ADMIN} --verify=false --force=false --contextroot=sola/admin --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=server ${PAYARA_PATH}/sola_deploy/${SOLA_WEB_ADMIN}.war \n\
-deploy --keepState=false --precompilejsp=false --availabilityEnabled=false --name=${SOLA_DESKTOP_WEBSTART} --verify=false --force=false --contextroot=sola --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=server ${PAYARA_PATH}/sola_deploy/${SOLA_DESKTOP_WEBSTART}.war " > ${POSTBOOT_COMMANDS} && \ 
+deploy --keepState=false --precompilejsp=false --availabilityEnabled=false --name=${SOLA_WEB_ADMIN} --verify=false --force=false --contextroot=${CONTEXT_ROOT}/admin --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=server ${PAYARA_PATH}/sola_deploy/${SOLA_WEB_ADMIN}.war \n\
+deploy --keepState=false --precompilejsp=false --availabilityEnabled=false --name=${SOLA_DESKTOP_WEBSTART} --verify=false --force=false --contextroot=${CONTEXT_ROOT} --enabled=true --properties=implicitCdiEnabled=true:preserveAppScopedResources=false:cdiDevModeEnabled=false --target=server ${PAYARA_PATH}/sola_deploy/${SOLA_DESKTOP_WEBSTART}.war " > ${POSTBOOT_COMMANDS} && \ 
     ${PAYARA_PATH}/bin/asadmin -u admin -W ${PAYARA_PATH}/temp/passwordFile start-domain ${PAYARA_DOMAIN} && \
     ${PAYARA_PATH}/bin/asadmin -u admin -W ${PAYARA_PATH}/temp/passwordFile multimode --file ${PAYARA_PATH}/temp/asadmin-command-file && \
     ${PAYARA_PATH}/bin/asadmin -u admin -W ${PAYARA_PATH}/temp/passwordFile stop-domain ${PAYARA_DOMAIN} 

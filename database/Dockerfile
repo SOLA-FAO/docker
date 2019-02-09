@@ -1,6 +1,8 @@
-# This DockerFlle can be used to build and configure an image of the Postgres database
-# server with PostGIS installed. Note that pre-built docker images for the SOLA solutions 
-# are available from DockerHub at https://hub.docker.com/u/mcdowella 
+# This Dockerflle can be used to build and configure an image for the SOLA database
+# based on a Postgres PostGIS image. Before building an image, you must manually unzip 
+# the database build files in the appropriate Solution/Version folder. Note that  
+# pre-built docker images for the SOLA solutions are available from DockerHub at 
+# https://hub.docker.com/u/mcdowella 
 
 FROM mdillon/postgis:11
 
@@ -9,13 +11,16 @@ ENV SOLA_HOME /home/sola
 # Used by create_database.sh to set the name of the SOLA database 
 ENV SOLA_DB sola
 
+# Used by create_database.sh to determine if the SOLA DB should be created
+ENV CREATE_SOLA_DB y
+
 # Used by create_database.sh to control if data is loaded into the 
-# new database or not
+# new database
 ENV SOLA_LOAD_DATA y
 
 # Change this to modify which SOLA solution database and version is built. 
 # Can also specify solution at build time from build command line. See --build-arg option. 
-ARG SOLA_SOLUTION=registry/1503a
+ARG SOLA_SOLUTION=systemreg/1503a
 
 RUN mkdir -p ${SOLA_HOME}
 

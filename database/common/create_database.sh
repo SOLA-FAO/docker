@@ -13,24 +13,28 @@ BUILD_LOG=$SOLA_HOME/build.log
 # Default DB connection values. Source values from environment
 # variables configured by the DockerFile. 
 dbname=$SOLA_DB
-createDb=y
+createDb=$CREATE_SOLA_DB
 loadData=$SOLA_LOAD_DATA
+
+if [ $CREATE_SOLA_DB != "y" ]; then
+    echo "Skipping SOLA database build"
+    echo "Skipping SOLA database build $(date)" > $BUILD_LOG 2>&1
+    exit 0
+fi
+
 
 # Start the build
 echo 
 echo 
 echo "Starting Build at $(date)"
 echo "Starting Build at $(date)" > $BUILD_LOG 2>&1
-echo "NOTE: Build of SOLA database will take approx. 5 minutes"
-echo "NOTE: Build of SOLA database will take approx. 5 minutes" > $BUILD_LOG 2>&1
+echo "NOTE: Build of SOLA database will take approx. 1 minute"
+echo "NOTE: Build of SOLA database will take approx. 1 minute" > $BUILD_LOG 2>&1
 
-# Skip creating the database depending on the users choice 
-if [ $createDb == "y" ]; then
-   # Create database passing in dbName as a variable
-   echo "Creating database..."
-   echo "Creating database..." >> $BUILD_LOG 2>&1
-   $psql --username="$POSTGRES_USER" --file=$SOLA_HOME/database.sql -v dbName=$dbname >>$BUILD_LOG 2>&1
-fi
+# Create database passing in dbName as a variable
+echo "Creating database..."
+echo "Creating database..." >> $BUILD_LOG 2>&1
+$psql --username="$POSTGRES_USER" --file=$SOLA_HOME/database.sql -v dbName=$dbname >>$BUILD_LOG 2>&1
 
 # Run the files to create the tables, functions and views, etc, of the database
 # and load the configuration data from the config directory. 
@@ -41,14 +45,11 @@ do
    $psql --username="$POSTGRES_USER" --file="$sqlfile" $dbname > /dev/null 2>> $BUILD_LOG
 done
 
-# Load data into the database.  
+# Load data into the database by creating a background thread. Using a 
+# background thread allows Postgres to complete its init processing so
+# that it can accept connections quickly.
 if [ $loadData == "y" ]; then
-	for sqlfile in $SOLA_HOME/data/*.sql
-	do
-	   echo "Running $sqlfile..."
-	   echo "### Running $sqlfile..." >> $BUILD_LOG 2>&1
-	   $psql --username="$POSTGRES_USER" --file="$sqlfile" $dbname > /dev/null 2>> $BUILD_LOG
-	done
+	$SOLA_HOME/load_database.sh &
 fi
 
 # Run any override settings for docker deployment

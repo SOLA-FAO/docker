@@ -1,7 +1,7 @@
 # Subfolders to ignore
 database/registry/*/
 database/stateland/*/
-server/stateland/deploy/*/
+database/systemreg/*/
 
 # Files to ignore 
 Thumbs.db
@@ -9,4 +9,4 @@ thumbs.db
 *.log
 # Ignore any certificate keystores to ensure private keys
 # are not uploaded to Github by mistake. 
-*.jks
+#*.jks
