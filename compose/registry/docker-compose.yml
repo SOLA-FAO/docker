@@ -1,0 +1,31 @@
+version: '3' 
+
+networks:
+    sola_reg: 
+    
+services:
+    db:
+        image: mcdowella/sola-registry-db
+        ports:
+         - "5432:5432"
+        container_name: sola-db
+        environment:
+          POSTGRES_PASSWORD: sola
+          CREATE_SOLA_DB: y
+          SOLA_LOAD_DATA: y
+        networks:
+           sola_reg:
+               aliases:
+                 - database
+    server:
+        image: mcdowella/sola-registry-server
+        container_name: sola-srv
+        ports:
+         - "4848:4848"
+         - "8080:8080"
+         - "8181:8181"
+        depends_on:
+         - db
+        networks:
+           sola_reg:
+           
