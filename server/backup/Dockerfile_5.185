@@ -4,11 +4,9 @@
 
 # Avoid versions 5.182, 5.183, and 5.184 of Payara server. These versions have been
 # tested, but prevent SOLA from deploying/running due to various issues.   
-FROM payara/server-full:5.181
-
-# Uncomment PAYARA_PATH and use for versions from 5.183 and above. PAYARA_PATH is set in 
-# versions prior to 5.183 by the Payara build. 
-#ENV PAYARA_PATH $PAYARA_DIR 
+FROM payara/server-full:5.185
+ 
+ENV PAYARA_PATH $PAYARA_DIR 
 
 # SOLA solution and version to build. 
 # Docker arguments can be overridden from the build command line. See the --build-arg option.
@@ -35,7 +33,6 @@ ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
 #ARG SOLA_DESKTOP_WEBSTART=desktop-sr-web-start-${SOLA_VERSION}
 #ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
 
-
 # Keystore parameters
 ARG SRC_KEYSTORE_PASS=changeit
 ARG MSG_ENCRYPT_CERT_ALIAS=xws-security-server
@@ -48,7 +45,7 @@ ARG DATABASE_HOST=database
 ARG DATAPOOL=sola
 
 # Payara domain and deploy parameters
-ARG PAYARA_DOMAIN=domain1
+ARG PAYARA_DOMAIN=production
 ARG PAYARA_PASSWD=admin
 
 # The length of time for the server to wait before starting the Payara domain. 
@@ -73,14 +70,14 @@ USER root
 # Copy files required for SOLA into the domain and sets up the file access permissions
 RUN mv ${PAYARA_PATH}/temp/jackson* ${PAYARA_PATH}/glassfish/modules/. && \
 	mv ${PAYARA_PATH}/temp/postgresql-42* ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/lib/ && \
-	mv ${PAYARA_PATH}/temp/init_2_delay_start.sh ${PAYARA_PATH}/. && \
+	mv ${PAYARA_PATH}/temp/init_2_delay_start.sh ${SCRIPT_DIR}/. && \
 	chown -R payara:payara ${PAYARA_PATH}/glassfish/modules/jackson* && \
     chmod 755 ${PAYARA_PATH}/glassfish/modules/jackson* && \
     chown -R payara:payara ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/lib/*.jar && \
 	chmod 755 ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/lib/*.jar && \
 	chown -R payara:payara ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/config/ && \
-	chmod 755 ${PAYARA_PATH}/init_2_delay_start.sh && \
-	chown -R payara:payara ${PAYARA_PATH}/init_2_delay_start.sh
+	chmod 755 ${SCRIPT_DIR}/init_2_delay_start.sh && \
+	chown -R payara:payara ${SCRIPT_DIR}/init_2_delay_start.sh
 	
 USER payara
 
@@ -119,6 +116,4 @@ deploy --keepState=false --precompilejsp=false --availabilityEnabled=false --nam
 USER root
 RUN rm -Rf {PAYARA_PATH}/temp
 
-# Override the default Entrypoint with a basic delay_start script to give the database server time to initialize. 
-ENTRYPOINT ["/bin/sh", "-c", "${PAYARA_PATH}/init_2_delay_start.sh && ${PAYARA_PATH}/bin/startInForeground.sh --passwordfile=/opt/pwdfile --postbootcommandfile ${POSTBOOT_COMMANDS} ${PAYARA_DOMAIN}"]
 

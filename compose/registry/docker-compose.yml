@@ -1,3 +1,5 @@
+# This file can be used to start multiple containers supporting the SOLA Registry solution. Use the command
+# docker-compose up -d
 version: '3' 
 
 networks:
@@ -17,6 +19,7 @@ services:
            sola_reg:
                aliases:
                  - database
+                 
     server:
         image: mcdowella/sola-registry-server
         container_name: sola-srv
@@ -26,6 +29,19 @@ services:
          - "8181:8181"
         depends_on:
          - db
+        environment:
+          WAIT_TIME: 90 # See init_2_delay_start.sh. Time to wait in seconds before starting the Payara domain
         networks:
            sola_reg:
-           
+
+    # Container that deploys pgAdmin4 to allow administration of the SOLA database. Accessible on localhost:8000	   
+    #dbadmin:
+    #    image: dpage/pgadmin4
+    #    container_name: db-admin
+    #    ports:
+    #     - "80:8000"
+    #    environment:
+    #      PGADMIN_DEFAULT_EMAIL: db@flossola.org # pgAdmin 4 username
+    #      PGADMIN_DEFAULT_PASSWORD: sola         # pgAdmin 4 password
+    #    networks:
+    #       sola_reg: 

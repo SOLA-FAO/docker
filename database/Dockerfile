@@ -20,7 +20,9 @@ ENV SOLA_LOAD_DATA y
 
 # Change this to modify which SOLA solution database and version is built. 
 # Can also specify solution at build time from build command line. See --build-arg option. 
-ARG SOLA_SOLUTION=systemreg/1503a
+ARG SOLA_SOLUTION=registry/1503a
+#ARG SOLA_SOLUTION=stateland/1503a
+#ARG SOLA_SOLUTION=systemreg/1503a
 
 RUN mkdir -p ${SOLA_HOME}
 
