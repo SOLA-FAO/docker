@@ -15,25 +15,25 @@ FROM payara/server-full:5.181
 ARG SOLA_VERSION=1503a
 
 # SOLA Registry settings
-ARG SOLA_SOLUTION=registry
-ARG CONTEXT_ROOT=sola
-ARG SOLA_SERVICES_EAR=sola-services-ear-${SOLA_VERSION}
-ARG SOLA_DESKTOP_WEBSTART=desktop-web-start-${SOLA_VERSION}
-ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+#ARG SOLA_SOLUTION=registry
+#ARG CONTEXT_ROOT=sola
+#ARG SOLA_SERVICES_EAR=sola-services-ear-${SOLA_VERSION}
+#ARG SOLA_DESKTOP_WEBSTART=desktop-web-start-${SOLA_VERSION}
+#ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
 
 # SOLA State Land Settings
-#ARG SOLA_SOLUTION=stateland
-#ARG CONTEXT_ROOT=sola_sl
-#ARG SOLA_SERVICES_EAR=sola-sl-services-ear-${SOLA_VERSION}
-#ARG SOLA_DESKTOP_WEBSTART=desktop-sl-web-start-${SOLA_VERSION}
-#ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+# ARG SOLA_SOLUTION=stateland
+# ARG CONTEXT_ROOT=sola_sl
+# ARG SOLA_SERVICES_EAR=sola-sl-services-ear-${SOLA_VERSION}
+# ARG SOLA_DESKTOP_WEBSTART=desktop-sl-web-start-${SOLA_VERSION}
+# ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
 
 #SOLA Systematic Registration Settings
-#ARG SOLA_SOLUTION=systemreg
-#ARG CONTEXT_ROOT=sola_sr
-#ARG SOLA_SERVICES_EAR=sola-sr-services-ear-${SOLA_VERSION}
-#ARG SOLA_DESKTOP_WEBSTART=desktop-sr-web-start-${SOLA_VERSION}
-#ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
+ARG SOLA_SOLUTION=systemreg
+ARG CONTEXT_ROOT=sola_sr
+ARG SOLA_SERVICES_EAR=sola-sr-services-ear-${SOLA_VERSION}
+ARG SOLA_DESKTOP_WEBSTART=desktop-sr-web-start-${SOLA_VERSION}
+ARG SOLA_WEB_ADMIN=sola-web-admin-1504a
 
 
 # Keystore parameters
@@ -44,16 +44,17 @@ ARG MSG_ENCRYPT_CERT_ALIAS=xws-security-server
 ARG DATABASE_USER=postgres
 ARG DATABASE_PASS=sola
 ARG DATABASE=sola
-ARG DATABASE_HOST=database
 ARG DATAPOOL=sola
-
+ENV DATABASE_HOST=database
+ENV DATABASE_PORT=5432
+    
 # Payara domain and deploy parameters
 ARG PAYARA_DOMAIN=domain1
 ARG PAYARA_PASSWD=admin
 
 # The length of time for the server to wait before starting the Payara domain. 
 # Can be used to give the SOLA Database server time to initialize.
-ENV WAIT_TIME=0
+ENV WAIT_TIME=90
 
 RUN mkdir -p ${PAYARA_PATH}/temp/ && \
     mkdir -p ${PAYARA_PATH}/sola_deploy/
@@ -74,13 +75,16 @@ USER root
 RUN mv ${PAYARA_PATH}/temp/jackson* ${PAYARA_PATH}/glassfish/modules/. && \
 	mv ${PAYARA_PATH}/temp/postgresql-42* ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/lib/ && \
 	mv ${PAYARA_PATH}/temp/init_2_delay_start.sh ${PAYARA_PATH}/. && \
+	mv ${PAYARA_PATH}/temp/wait_for_it.sh ${PAYARA_PATH}/. && \
 	chown -R payara:payara ${PAYARA_PATH}/glassfish/modules/jackson* && \
     chmod 755 ${PAYARA_PATH}/glassfish/modules/jackson* && \
     chown -R payara:payara ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/lib/*.jar && \
 	chmod 755 ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/lib/*.jar && \
 	chown -R payara:payara ${PAYARA_PATH}/glassfish/domains/${PAYARA_DOMAIN}/config/ && \
 	chmod 755 ${PAYARA_PATH}/init_2_delay_start.sh && \
-	chown -R payara:payara ${PAYARA_PATH}/init_2_delay_start.sh
+	chown -R payara:payara ${PAYARA_PATH}/init_2_delay_start.sh && \
+	chmod 755 ${PAYARA_PATH}/wait_for_it.sh && \
+	chown -R payara:payara ${PAYARA_PATH}/wait_for_it.sh
 	
 USER payara
 
@@ -96,7 +100,7 @@ USER payara
 #    but does not deploy the applications. Deploying the apps is performed when the image is 
 #    run to create a container.
 RUN echo "create-jdbc-connection-pool --validateAtmostOncePeriodInSeconds=0 --sqlTraceListeners=fish.payara.jdbc.SilentSqlTraceListener --statementLeakReclaim=false --ping=false --maxWaitTimeInMillis=60000 --wrapJdbcObjects=true --connectionValidationMethod=table --steadyPoolSize=8 --idleTimeoutInSeconds=300 --maxConnectionUsageCount=0 --matchConnections=false --connectionCreationRetryIntervalInSeconds=10 --associateWithThread=false --isConnectionValidationRequired=false --connectionLeakReclaim=false --datasourceClassname=org.postgresql.ds.PGConnectionPoolDataSource --connectionCreationRetryAttempts=0 --statementCacheSize=0 --resType=javax.sql.ConnectionPoolDataSource --statementLeakTimeoutInSeconds=0 --failAllConnections=false --statementTimeoutInSeconds=-1 --lazyConnectionEnlistment=false --pooling=true --poolResizeQuantity=2 --allowNonComponentCallers=false --connectionLeakTimeoutInSeconds=0 --isIsolationLevelGuaranteed=true --maxPoolSize=32 --nonTransactionalConnections=false --lazyConnectionAssociation=false ${DATAPOOL} \n\
-set resources.jdbc-connection-pool.${DATAPOOL}.property.TargetServerType=any resources.jdbc-connection-pool.${DATAPOOL}.property.BinaryTransfer=true resources.jdbc-connection-pool.${DATAPOOL}.property.UnknownLength=2147483647 resources.jdbc-connection-pool.${DATAPOOL}.property.DisableColumnSanitiser=false resources.jdbc-connection-pool.${DATAPOOL}.property.UseSpNego=false resources.jdbc-connection-pool.${DATAPOOL}.property.SspiServiceClass=POSTGRES resources.jdbc-connection-pool.${DATAPOOL}.property.ProtocolVersion=0 resources.jdbc-connection-pool.${DATAPOOL}.property.SendBufferSize=-1 resources.jdbc-connection-pool.${DATAPOOL}.property.ReceiveBufferSize=-1 resources.jdbc-connection-pool.${DATAPOOL}.property.LoadBalanceHosts=false resources.jdbc-connection-pool.${DATAPOOL}.property.ReadOnly=false resources.jdbc-connection-pool.${DATAPOOL}.property.LogUnclosedConnections=false resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseName=${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.GssLib=auto resources.jdbc-connection-pool.${DATAPOOL}.property.CancelSignalTimeout=10 resources.jdbc-connection-pool.${DATAPOOL}.property.PortNumber=0 resources.jdbc-connection-pool.${DATAPOOL}.property.DefaultRowFetchSize=0 resources.jdbc-connection-pool.${DATAPOOL}.property.User=${DATABASE_USER} resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseMetadataCacheFieldsMiB=5 resources.jdbc-connection-pool.${DATAPOOL}.property.URL=jdbc:postgresql://${DATABASE_HOST}/${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.Url=jdbc:postgresql://${DATABASE_HOST}/${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.AllowEncodingChanges=false resources.jdbc-connection-pool.${DATAPOOL}.property.JaasLogin=true resources.jdbc-connection-pool.${DATAPOOL}.property.PrepareThreshold=5 resources.jdbc-connection-pool.${DATAPOOL}.property.ReWriteBatchedInserts=false resources.jdbc-connection-pool.${DATAPOOL}.property.SocketTimeout=0 resources.jdbc-connection-pool.${DATAPOOL}.property.HostRecheckSeconds=10 resources.jdbc-connection-pool.${DATAPOOL}.property.Password=${DATABASE_PASS} resources.jdbc-connection-pool.${DATAPOOL}.property.ConnectTimeout=10 resources.jdbc-connection-pool.${DATAPOOL}.property.ApplicationName='PostgreSQL JDBC Driver' resources.jdbc-connection-pool.${DATAPOOL}.property.PreparedStatementCacheQueries=256 resources.jdbc-connection-pool.${DATAPOOL}.property.Ssl=false resources.jdbc-connection-pool.${DATAPOOL}.property.PreparedStatementCacheSizeMiB=5 resources.jdbc-connection-pool.${DATAPOOL}.property.LoginTimeout=0 resources.jdbc-connection-pool.${DATAPOOL}.property.ServerName=${DATABASE_HOST} resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseMetadataCacheFields=65536 resources.jdbc-connection-pool.${DATAPOOL}.property.TcpKeepAlive=false \n\
+set resources.jdbc-connection-pool.${DATAPOOL}.property.TargetServerType=any resources.jdbc-connection-pool.${DATAPOOL}.property.BinaryTransfer=true resources.jdbc-connection-pool.${DATAPOOL}.property.UnknownLength=2147483647 resources.jdbc-connection-pool.${DATAPOOL}.property.DisableColumnSanitiser=false resources.jdbc-connection-pool.${DATAPOOL}.property.UseSpNego=false resources.jdbc-connection-pool.${DATAPOOL}.property.SspiServiceClass=POSTGRES resources.jdbc-connection-pool.${DATAPOOL}.property.ProtocolVersion=0 resources.jdbc-connection-pool.${DATAPOOL}.property.SendBufferSize=-1 resources.jdbc-connection-pool.${DATAPOOL}.property.ReceiveBufferSize=-1 resources.jdbc-connection-pool.${DATAPOOL}.property.LoadBalanceHosts=false resources.jdbc-connection-pool.${DATAPOOL}.property.ReadOnly=false resources.jdbc-connection-pool.${DATAPOOL}.property.LogUnclosedConnections=false resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseName=${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.GssLib=auto resources.jdbc-connection-pool.${DATAPOOL}.property.CancelSignalTimeout=10 resources.jdbc-connection-pool.${DATAPOOL}.property.PortNumber=${DATABASE_PORT} resources.jdbc-connection-pool.${DATAPOOL}.property.DefaultRowFetchSize=0 resources.jdbc-connection-pool.${DATAPOOL}.property.User=${DATABASE_USER} resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseMetadataCacheFieldsMiB=5 resources.jdbc-connection-pool.${DATAPOOL}.property.URL=jdbc:postgresql://${DATABASE_HOST}/${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.Url=jdbc:postgresql://${DATABASE_HOST}/${DATABASE} resources.jdbc-connection-pool.${DATAPOOL}.property.AllowEncodingChanges=false resources.jdbc-connection-pool.${DATAPOOL}.property.JaasLogin=true resources.jdbc-connection-pool.${DATAPOOL}.property.PrepareThreshold=5 resources.jdbc-connection-pool.${DATAPOOL}.property.ReWriteBatchedInserts=false resources.jdbc-connection-pool.${DATAPOOL}.property.SocketTimeout=0 resources.jdbc-connection-pool.${DATAPOOL}.property.HostRecheckSeconds=10 resources.jdbc-connection-pool.${DATAPOOL}.property.Password=${DATABASE_PASS} resources.jdbc-connection-pool.${DATAPOOL}.property.ConnectTimeout=10 resources.jdbc-connection-pool.${DATAPOOL}.property.ApplicationName='PostgreSQL JDBC Driver' resources.jdbc-connection-pool.${DATAPOOL}.property.PreparedStatementCacheQueries=256 resources.jdbc-connection-pool.${DATAPOOL}.property.Ssl=false resources.jdbc-connection-pool.${DATAPOOL}.property.PreparedStatementCacheSizeMiB=5 resources.jdbc-connection-pool.${DATAPOOL}.property.LoginTimeout=0 resources.jdbc-connection-pool.${DATAPOOL}.property.ServerName=${DATABASE_HOST} resources.jdbc-connection-pool.${DATAPOOL}.property.DatabaseMetadataCacheFields=65536 resources.jdbc-connection-pool.${DATAPOOL}.property.TcpKeepAlive=false \n\
 create-jdbc-resource --enabled=true --poolName=${DATAPOOL} --target=domain jdbc/${DATAPOOL} \n\
 create-resource-ref --enabled=true --target=server jdbc/${DATAPOOL} \n\
 create-jdbc-resource --enabled=true --poolName=${DATAPOOL} --target=domain jdbc/${DATAPOOL}_sl \n\

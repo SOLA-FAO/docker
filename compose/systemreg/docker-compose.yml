@@ -1,35 +1,35 @@
-# This file can be used to start multiple containers supporting the SOLA Registry solution. Use the command
-# docker-compose up -d. It will take up to 3 minutes before the SOLA Registry services can be accessed. 
+# This file can be used to start multiple containers supporting the SOLA Systematic Registration solution. Use the command
+# docker-compose up -d. It will take up to 3 minutes before the SOLA Systematic Registration services can be accessed. 
 version: '3' 
 
 networks:
-    sola_reg: 
-    
+    sola_sr: 
+ 
 volumes:
-   sola_reg_data:
+   sola_sr_data:
       driver: local
-    
+      
 services:
     db:
         # DB server hosting SOLA SR database. To connect to this db; hostname=database, user=postgres, passwd=sola
-        image: mcdowella/sola-registry-db
+        image: mcdowella/sola-systemreg-db
         ports:
          - "5432:5432"
-        container_name: sola-db
+        container_name: sr-db
         environment:
           POSTGRES_PASSWORD: sola
           CREATE_SOLA_DB: y
           SOLA_LOAD_DATA: y
         networks:
-           sola_reg:
+           sola_sr:
                aliases:
                  - database
         volumes:
-         - sola_reg_data:/var/lib/postgresql/data
-                 
+         - sola_sr_data:/var/lib/postgresql/data               
+
     server:
-        image: mcdowella/sola-registry-server
-        container_name: sola-srv
+        image: mcdowella/sola-systemreg-server
+        container_name: sr-srv
         ports:
          - "4848:4848"
          - "8080:8080"
@@ -39,7 +39,7 @@ services:
         environment:
           WAIT_TIME: 180
         networks:
-           sola_reg:
+           sola_sr:
 
     # Container that deploys pgAdmin4 to allow administration of the SOLA database. Accessible on localhost:80
     # with username=db@flossola.org and passwd=sola 	   
@@ -52,4 +52,4 @@ services:
            PGADMIN_DEFAULT_EMAIL: db@flossola.org
            PGADMIN_DEFAULT_PASSWORD: sola
         networks:
-           sola_reg: 
+           sola_sr: 

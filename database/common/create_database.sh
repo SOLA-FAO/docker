@@ -16,7 +16,7 @@ dbname=$SOLA_DB
 createDb=$CREATE_SOLA_DB
 loadData=$SOLA_LOAD_DATA
 
-if [ $CREATE_SOLA_DB != "y" ]; then
+if [ $createDb == "n" ]; then
     echo "Skipping SOLA database build"
     echo "Skipping SOLA database build $(date)" > $BUILD_LOG 2>&1
     exit 0
