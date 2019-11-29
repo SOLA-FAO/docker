@@ -1,14 +1,14 @@
 # This file can be used to start multiple containers supporting the SOLA Registry solution. Use the command
-# docker-compose up -d. It will take up to 3 minutes before the SOLA Registry services can be accessed. 
-version: '3' 
+# docker-compose up -d. It will take up to 3 minutes before the SOLA Registry services can be accessed.
+version: '3'
 
 networks:
-    sola_reg: 
-    
+    sola_reg:
+
 volumes:
    sola_reg_data:
       driver: local
-    
+
 services:
     db:
         # DB server hosting SOLA SR database. To connect to this db; hostname=database, user=postgres, passwd=sola
@@ -26,9 +26,10 @@ services:
                  - database
         volumes:
          - sola_reg_data:/var/lib/postgresql/data
-                 
+
     server:
         image: mcdowella/sola-registry-server
+        restart: always
         container_name: sola-srv
         ports:
          - "4848:4848"
@@ -42,7 +43,7 @@ services:
            sola_reg:
 
     # Container that deploys pgAdmin4 to allow administration of the SOLA database. Accessible on localhost:80
-    # with username=db@flossola.org and passwd=sola 	   
+    # with username=db@flossola.org and passwd=sola
     dbadmin:
         image: dpage/pgadmin4
         container_name: db-admin
@@ -52,4 +53,26 @@ services:
            PGADMIN_DEFAULT_EMAIL: db@flossola.org
            PGADMIN_DEFAULT_PASSWORD: sola
         networks:
-           sola_reg: 
+           sola_reg:
+
+    reg-backups:
+        image: prodrigestivill/postgres-backup-local
+        container_name: sola-db-backups
+        restart: always
+        volumes:
+           - $HOME/sola-docker-data/backups/pg-reg:/backups
+        links:
+           - db
+        environment:
+          - POSTGRES_HOST=192.168.1.71
+          - POSTGRES_DB=sola
+          - POSTGRES_USER=postgres
+          - POSTGRES_PASSWORD=sola
+          - POSTGRES_EXTRA_OPTS=-Z9 --schema=public --blobs
+          - SCHEDULE=@daily
+          - BACKUP_KEEP_DAYS=7
+          - BACKUP_KEEP_WEEKS=4
+          - BACKUP_KEEP_MONTHS=6
+          - HEALTHCHECK_PORT=85
+        networks:
+           sola_reg:
