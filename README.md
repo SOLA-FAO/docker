@@ -1,2 +1,2 @@
 # docker
-Contains docker files to support containerization of the SOLA solutions
+Contains docker files to support containerization of the SOLA Registry solution
